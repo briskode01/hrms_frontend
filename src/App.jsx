@@ -30,6 +30,7 @@ function AppShell() {
 // ─────────────────────────────────────────────────────────────
 // Root App — shows Login if not logged in, AppShell if logged in
 // ─────────────────────────────────────────────────────────────
+console.log('Test')
 function DashboardGate() {
   const { user } = useAuth();
 
