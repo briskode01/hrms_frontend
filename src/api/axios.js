@@ -5,7 +5,7 @@ import axios from "axios";
 
 
 const API = axios.create({
-  baseURL: "https://nebolla.com/api",
+  baseURL: "https://sportyfi.com/api",
 });
 
 API.interceptors.request.use(
