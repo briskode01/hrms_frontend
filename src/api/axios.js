@@ -5,7 +5,7 @@ import axios from "axios";
 
 
 const API = axios.create({
-  baseURL: "https://sportyfi.com/api",
+  baseURL: "http://localhost:8000/api",
 });
 
 API.interceptors.request.use(
