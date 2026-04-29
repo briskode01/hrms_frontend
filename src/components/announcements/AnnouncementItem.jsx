@@ -79,7 +79,7 @@ const AnnouncementItem = ({
         {post.image && (
           <div className="mb-4 rounded-2xl overflow-hidden border border-slate-200">
             <img
-              src={`https://nebolla.com/images${post.image}`}
+              src={`https://sportyfi.com/images${post.image}`}
               alt="Announcement Attachment"
               className="w-full h-auto max-h-96 object-cover hover:scale-[1.02] transition-transform duration-500"
             />

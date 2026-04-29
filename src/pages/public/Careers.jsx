@@ -14,7 +14,7 @@ import JobDetailModal from "../../components/careers/JobDetailModal";
 import JobsGrid from "../../components/careers/JobsGrid";
 import { defaultForm, departments, jobTypes } from "../../components/careers/constants";
 
-const PUBLIC_API = axios.create({ baseURL: "https://nebolla.com/api" });
+const PUBLIC_API = axios.create({ baseURL: "https://sportyfi.com/api" });
 
 export default function Careers() {
     const [jobs, setJobs] = useState([]);
