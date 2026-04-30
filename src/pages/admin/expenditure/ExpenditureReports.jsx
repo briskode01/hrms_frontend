@@ -55,13 +55,19 @@ function ReportCard({ title, rows, total, totalLabel, color }) {
 }
 
 export default function ExpenditureReports() {
-    const { expenses: allExpenses, income: allIncome, advances: allAdvances, fmtINR } = useExpenditure();
+    const { expenses: allExpenses, income: allIncome, advances: allAdvances, payrolls: allPayrolls, fmtINR } = useExpenditure();
     const [filterDate, setFilterDate] = useState("");
 
     const matchDate = (d) => d && d.startsWith(filterDate);
     const expenses = filterDate ? allExpenses.filter(e => matchDate(e.date)) : allExpenses;
     const income = filterDate ? allIncome.filter(i => matchDate(i.date)) : allIncome;
     const advances = filterDate ? allAdvances.filter(a => matchDate(a.date) || matchDate(a.createdAt)) : allAdvances;
+
+    let payrolls = allPayrolls || [];
+    if (filterDate) {
+        const [year, month] = filterDate.split('-');
+        payrolls = (allPayrolls || []).filter(p => p.year === Number(year) && p.month === Number(month));
+    }
 
     const totalIncome = income.reduce((sum, i) => sum + Number(i.amount), 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -101,7 +107,7 @@ export default function ExpenditureReports() {
 
     // Profit/loss
     const profit = totalIncome - totalExpenses;
-    const salaryCost = 420000;
+    const salaryCost = payrolls.reduce((sum, p) => sum + (Number(p.earnings?.basic) || 0) + (Number(p.earnings?.hra) || 0) + (Number(p.earnings?.bonus) || 0), 0);
     const netAfterSalary = profit - salaryCost;
 
     return (

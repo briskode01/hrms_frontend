@@ -59,21 +59,35 @@ export default function useEmployeeAttendance() {
             setActionLoading("check-in");
 
             // 1. Get location
-            const position = await new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    reject(new Error("Geolocation is not supported by your browser"));
-                }
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
+            const getPosition = (options) => {
+                return new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        reject(new Error("Geolocation is not supported by your browser"));
+                    }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+                });
+            };
+
+            let position;
+            try {
+                position = await getPosition({
                     enableHighAccuracy: true,
                     timeout: 10000,
                     maximumAge: 0
                 });
-            }).catch((err) => {
-                if (err.code === 1) throw new Error("Please allow location access to check in.");
-                if (err.code === 2) throw new Error("Location unavailable. Please check your GPS settings.");
-                if (err.code === 3) throw new Error("Location request timed out. Please try again.");
-                throw new Error(err.message || "Could not retrieve location.");
-            });
+            } catch (err) {
+                console.warn("High accuracy geolocation failed. Falling back to low accuracy...", err);
+                position = await getPosition({
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 0
+                }).catch((fallbackErr) => {
+                    if (fallbackErr.code === 1) throw new Error("Please allow location access to check in.");
+                    if (fallbackErr.code === 2) throw new Error("Location unavailable. Please check your GPS settings.");
+                    if (fallbackErr.code === 3) throw new Error("Location request timed out. Please try again.");
+                    throw new Error(fallbackErr.message || "Could not retrieve location.");
+                });
+            }
 
             const { latitude, longitude } = position.coords;
 

@@ -13,6 +13,7 @@ export function ExpenditureProvider({ children }) {
     const [expenses, setExpenses]   = useState([]);
     const [income,   setIncome]     = useState([]);
     const [advances, setAdvances]   = useState([]);
+    const [payrolls, setPayrolls]   = useState([]);
     const [stats,    setStats]      = useState(null);
     const [loading,  setLoading]    = useState(true);
     const [subPage,  setSubPage]    = useState("overview");
@@ -21,16 +22,18 @@ export function ExpenditureProvider({ children }) {
     const fetchAll = async () => {
         try {
             setLoading(true);
-            const [expRes, incRes, advRes, statRes] = await Promise.all([
+            const [expRes, incRes, advRes, statRes, payRes] = await Promise.all([
                 API.get("/expenditure/expenses"),
                 API.get("/expenditure/income"),
                 API.get("/expenditure/advances"),
                 API.get("/expenditure/stats"),
+                API.get("/payroll"),
             ]);
             setExpenses(expRes.data?.data  || []);
             setIncome(incRes.data?.data    || []);
             setAdvances(advRes.data?.data  || []);
             setStats(statRes.data?.data    || null);
+            setPayrolls(payRes.data?.data  || []);
         } catch (e) {
             toast.error("Failed to load expenditure data");
         } finally {
@@ -134,7 +137,7 @@ export function ExpenditureProvider({ children }) {
 
     return (
         <ExpenditureContext.Provider value={{
-            expenses, income, advances, stats, loading, subPage, setSubPage,
+            expenses, income, advances, payrolls, stats, loading, subPage, setSubPage,
             addExpense, editExpense, deleteExpense,
             addIncome, editIncome, deleteIncome,
             addAdvance, editAdvance, deleteAdvance, clearAdvance,
