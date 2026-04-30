@@ -9,7 +9,7 @@ import UserManagement from "@/components/settings/UserManagement";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Settings() {
-    const { user } = useAuth();
+    const { isSuperAdmin } = useAuth();
 
     return (
         <div className="space-y-6">
@@ -25,8 +25,8 @@ export default function Settings() {
             {/* Change Password */}
             <ChangePassword />
 
-            {/* User Management — Admin Only */}
-            {user?.role === "admin" && <UserManagement />}
+            {/* User Management — Super Admin only */}
+            {isSuperAdmin && <UserManagement />}
         </div>
     );
 }

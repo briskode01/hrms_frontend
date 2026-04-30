@@ -6,9 +6,13 @@ import AdminProfileCard from "./AdminProfileCard";
 import EmployeeProfileCard from "./EmployeeProfileCard";
 
 const ROLE_STYLES = {
-    admin: "bg-rose-500/20 text-rose-400",
+    super_admin: "bg-rose-500/20 text-rose-400",
+    hr_admin: "bg-blue-500/20 text-blue-400",
+    manager: "bg-amber-500/20 text-amber-400",
+    finance_admin: "bg-violet-500/20 text-violet-400",
     employee: "bg-emerald-500/20 text-emerald-400",
 };
+
 
 const BUILT_MODULES = ["dashboard", "employees", "attendance", "tasks", "announcements", "leaves", "payroll", "wages-creation", "expenditure", "profile", "performance", "tracking", "recruitment", "settings", "holidays"];
 

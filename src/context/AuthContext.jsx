@@ -1,26 +1,25 @@
 // @ts-nocheck
 
-
 import { createContext, useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import API from "../api/axios";
 import { getDashboardPathByRole } from "../utils/authRoutes";
-
+import { hasPermission, isAdminRole, ADMIN_ROLES } from "../utils/permissions";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+
     useEffect(() => {
-        const token = localStorage.getItem("hrflow_token");
+        const token    = localStorage.getItem("hrflow_token");
         const userData = localStorage.getItem("hrflow_user");
 
         if (token && userData) {
             try {
                 setUser(JSON.parse(userData));
             } catch {
-                // Corrupt data — clear it
                 localStorage.removeItem("hrflow_token");
                 localStorage.removeItem("hrflow_user");
             }
@@ -32,11 +31,8 @@ export function AuthProvider({ children }) {
     const login = async (email, password, selectedRole) => {
         try {
             const { data } = await API.post("/auth/login", { email, password, role: selectedRole });
-
-            // Save token and user to localStorage for session persistence
             localStorage.setItem("hrflow_token", data.token);
             localStorage.setItem("hrflow_user", JSON.stringify(data.user));
-
             setUser(data.user);
             toast.success(data.message || "Login successful! 👋");
             return {
@@ -58,7 +54,7 @@ export function AuthProvider({ children }) {
         toast.success("Logged out successfully");
     };
 
-    // ─── Update user (after profile edit) ──────────────────────────
+    // ─── Update user (after profile edit) ────────────────────────
     const updateUser = (updatedFields) => {
         const newUser = { ...user, ...updatedFields };
         setUser(newUser);
@@ -66,10 +62,22 @@ export function AuthProvider({ children }) {
     };
 
     // ─── Role Helpers ─────────────────────────────────────────────
-    const isAdmin = user?.role === "admin";
-    const isEmployee = user?.role === "employee";
+    const role = user?.role;
 
-    // ─── Provide values to all children ──────────────────────────
+    /** True for ANY admin-type role (all non-employee roles) */
+    const isAnyAdmin     = isAdminRole(role);
+    const isSuperAdmin   = role === "super_admin";
+    const isHRAdmin      = role === "hr_admin";
+    const isManager      = role === "manager";
+    const isFinanceAdmin = role === "finance_admin";
+    const isEmployee     = role === "employee";
+
+    /** Check a specific permission string against the current user's role */
+    const checkPermission = (permission) => hasPermission(role, permission);
+
+    // Legacy: kept for backward compat with existing components
+    const isAdmin = isAnyAdmin;
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -77,20 +85,25 @@ export function AuthProvider({ children }) {
             login,
             logout,
             updateUser,
-            isAdmin,
+            // Role booleans
+            isAdmin,        // legacy — any admin role
+            isAnyAdmin,
+            isSuperAdmin,
+            isHRAdmin,
+            isManager,
+            isFinanceAdmin,
             isEmployee,
             isLoggedIn: !!user,
+            // Permission check helper
+            hasPermission: checkPermission,
         }}>
             {children}
         </AuthContext.Provider>
     );
 }
 
-// Step 3: Custom hook for easy access
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error("useAuth must be used inside AuthProvider");
-    }
+    if (!context) throw new Error("useAuth must be used inside AuthProvider");
     return context;
 };

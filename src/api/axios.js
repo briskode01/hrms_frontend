@@ -24,16 +24,15 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear session and reload
-      const message = error.response?.data?.message || "";
-      if (message.includes("expired") || message.includes("Invalid token")) {
-        localStorage.removeItem("hrflow_token");
-        localStorage.removeItem("hrflow_user");
-        window.location.reload(); // sends user back to Login
-      }
+      // Any 401 = token is invalid, expired, or user no longer exists
+      // Clear session and redirect to login
+      localStorage.removeItem("hrflow_token");
+      localStorage.removeItem("hrflow_user");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
 );
+
 
 export default API;

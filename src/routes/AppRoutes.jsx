@@ -1,79 +1,84 @@
 // @ts-nocheck
-// client/src/routes/AppRoutes.jsx
+// routes/AppRoutes.jsx
 // ─────────────────────────────────────────────────────────────
-// Renders the correct page component based on the active tab.
-// Also handles modals (Add/Edit/View Employee).
+// Renders the correct page component based on the active tab
+// and the current user's RBAC role.
 // ─────────────────────────────────────────────────────────────
 
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { isAdminRole } from "../utils/permissions";
+import NAV_ITEMS from "../utils/navItems";
 
-// Pages
-import Attendance from "../pages/admin/Attendance";
-import Dashboard from "../pages/admin/Dashboard";
-import Employees from "../pages/admin/Employees";
-import Payroll from "../pages/admin/Payroll";
-import Performance from "../pages/admin/Performance";
-import Recruitment from "../pages/admin/Recruitment";
-import Settings from "../pages/admin/Settings";
-import Tasks from "../pages/admin/Tasks";
-import Tracking from "../pages/admin/Tracking";
+// Admin pages
+import Attendance    from "../pages/admin/Attendance";
+import Dashboard     from "../pages/admin/Dashboard";
+import Employees     from "../pages/admin/Employees";
+import Payroll       from "../pages/admin/Payroll";
+import Performance   from "../pages/admin/Performance";
+import Recruitment   from "../pages/admin/Recruitment";
+import Settings      from "../pages/admin/Settings";
+import Tasks         from "../pages/admin/Tasks";
+import Tracking      from "../pages/admin/Tracking";
 import Announcements from "../pages/admin/Announcements";
 import WagesCreation from "../pages/admin/WagesCreation";
-import EmployeeAttendance from "../pages/employee/EmployeeAttendance";
-import EmployeeDashboard from "../pages/employee/EmployeeDashboard";
-import EmployeeLeaves from "../pages/employee/EmployeeLeaves";
-import EmployeePayroll from "../pages/employee/EmployeePayroll";
-import EmployeePerformance from "../pages/employee/EmployeePerformance";
-import EmployeeProfile from "../pages/employee/EmployeeProfile";
-import EmployeeTasks from "../pages/employee/EmployeeTasks";
-import HolidayPage from "../pages/HolidayPage";
+import Expenditure   from "../pages/admin/expenditure/Expenditure";
+
+// Employee pages
+import EmployeeAttendance   from "../pages/employee/EmployeeAttendance";
+import EmployeeDashboard    from "../pages/employee/EmployeeDashboard";
+import EmployeeLeaves       from "../pages/employee/EmployeeLeaves";
+import EmployeePayroll      from "../pages/employee/EmployeePayroll";
+import EmployeePerformance  from "../pages/employee/EmployeePerformance";
+import EmployeeProfile      from "../pages/employee/EmployeeProfile";
+import EmployeeTasks        from "../pages/employee/EmployeeTasks";
 import EmployeeAnnouncements from "../pages/employee/Announcements";
-import Expenditure from "../pages/admin/expenditure/Expenditure";
+
+// Shared pages
+import HolidayPage from "../pages/HolidayPage";
 
 // Modals
 import EmployeeDetail from "../components/employee/EmployeeDetail";
-import EmployeeForm from "../components/employee/EmployeeForm";
+import EmployeeForm   from "../components/employee/EmployeeForm";
+
 
 export default function AppRoutes({ activeTab, setActiveTab }) {
-    const { user, isAdmin } = useAuth();
+    const { user, isSuperAdmin, isHRAdmin, isManager, isFinanceAdmin, hasPermission } = useAuth();
+    const role = user?.role;
+    const userIsAdmin = isAdminRole(role);
 
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [editEmployee, setEditEmployee] = useState(null);
-    const [viewEmployee, setViewEmployee] = useState(null);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [showAddForm,     setShowAddForm]     = useState(false);
+    const [editEmployee,    setEditEmployee]     = useState(null);
+    const [viewEmployee,    setViewEmployee]     = useState(null);
+    const [refreshTrigger,  setRefreshTrigger]   = useState(0);
 
     const triggerRefresh = () => setRefreshTrigger((n) => n + 1);
 
-    // Build visible nav IDs for the current role
-    const NAV_ITEMS = [
-        { id: "dashboard", roles: ["admin", "employee"] },
-        { id: "employees", roles: ["admin"] },
-        { id: "attendance", roles: ["admin", "employee"] },
-        { id: "tasks", roles: ["admin", "employee"] },
-        { id: "announcements", roles: ["admin", "employee"] },
-        { id: "leaves", roles: ["employee"] },
-        { id: "payroll", roles: ["admin", "employee"] },
-        { id: "wages-creation", roles: ["admin"] },
-        { id: "expenditure",    roles: ["admin"] },
-        { id: "holidays",       roles: ["admin", "employee"] },
-        { id: "profile", roles: ["employee"] },
-        { id: "performance", roles: ["admin", "employee"] },
-        { id: "tracking", roles: ["admin"] },
-        { id: "recruitment", roles: ["admin"] },
-        { id: "settings", roles: ["admin"] },
-    ];
     const visibleNavIds = NAV_ITEMS
-        .filter((n) => n.roles.includes(user?.role))
+        .filter((n) => n.roles.includes(role))
         .map((n) => n.id);
+
+    // ── Convenience booleans ──────────────────────────────────────
+    const canManageEmployees  = hasPermission("manage_employees");
+    const canManagePayroll    = hasPermission("manage_payroll");
+    const canManageExpenditure = hasPermission("manage_expenditure");
+    const canApproveLeave     = hasPermission("approve_leave");
+    const canManageSettings   = hasPermission("manage_settings");
+    const canManageTracking   = hasPermission("manage_tracking");
+    const canManageRecruitment = hasPermission("manage_recruitment");
+    const canManageAttendance = hasPermission("manage_attendance");
 
     return (
         <>
-            {/* ✅ Dashboard */}
-            {activeTab === "dashboard" && (user?.role === "employee" ? <EmployeeDashboard setActiveTab={setActiveTab} /> : <Dashboard setActiveTab={setActiveTab} />)}
+            {/* ── Dashboard ── */}
+            {activeTab === "dashboard" && (
+                role === "employee"
+                    ? <EmployeeDashboard setActiveTab={setActiveTab} />
+                    : <Dashboard setActiveTab={setActiveTab} />
+            )}
 
-            {/* ✅ Employees */}
-            {activeTab === "employees" && isAdmin && (
+            {/* ── Employees (super_admin, hr_admin, manager can view) ── */}
+            {activeTab === "employees" && canManageEmployees && (
                 <Employees
                     key={refreshTrigger}
                     onAddClick={() => setShowAddForm(true)}
@@ -81,47 +86,80 @@ export default function AppRoutes({ activeTab, setActiveTab }) {
                     onEditClick={(emp) => setEditEmployee(emp)}
                 />
             )}
+            {activeTab === "employees" && !canManageEmployees && isManager && (
+                <Employees
+                    key={refreshTrigger}
+                    readOnly
+                    onViewClick={(emp) => setViewEmployee(emp)}
+                />
+            )}
 
-            {/* ✅ Attendance */}
-            {activeTab === "attendance" && (user?.role === "employee" ? <EmployeeAttendance /> : isAdmin && <Attendance />)}
+            {/* ── Attendance ── */}
+            {activeTab === "attendance" && (
+                role === "employee"
+                    ? <EmployeeAttendance />
+                    : userIsAdmin && <Attendance />
+            )}
 
-            {/* ✅ Tasks */}
-            {activeTab === "tasks" && (user?.role === "employee" ? <EmployeeTasks /> : isAdmin && <Tasks />)}
 
-            {/* ✅ Announcements */}
-            {activeTab === "announcements" && (user?.role === "employee" ? <EmployeeAnnouncements /> : isAdmin && <Announcements />)}
+            {/* ── Tasks ── */}
+            {activeTab === "tasks" && (
+                role === "employee" ? <EmployeeTasks /> : userIsAdmin && <Tasks />
+            )}
 
-            {/* ✅ Leaves */}
-            {activeTab === "leaves" && user?.role === "employee" && <EmployeeLeaves />}
+            {/* ── Announcements ── */}
+            {activeTab === "announcements" && (
+                role === "employee" ? <EmployeeAnnouncements /> : userIsAdmin && <Announcements />
+            )}
 
-            {/* ✅ Holidays */}
+            {/* ── Leaves ── */}
+            {activeTab === "leaves" && (
+                role === "employee"
+                    ? <EmployeeLeaves />
+                    : canApproveLeave && <EmployeeLeaves adminView />
+            )}
+
+            {/* ── Holidays ── */}
             {activeTab === "holidays" && <HolidayPage />}
 
-            {/* ✅ Payroll */}
-            {activeTab === "payroll" && (isAdmin ? <Payroll /> : user?.role === "employee" ? <EmployeePayroll /> : null)}
+            {/* ── Payroll ── */}
+            {activeTab === "payroll" && (
+                canManagePayroll
+                    ? <Payroll />
+                    : role === "employee"
+                        ? <EmployeePayroll />
+                        : null
+            )}
 
-            {/* ✅ Wages Creation */}
-            {activeTab === "wages-creation" && isAdmin && <WagesCreation />}
+            {/* ── Wages Creation (super_admin, finance_admin) ── */}
+            {activeTab === "wages-creation" && canManagePayroll && <WagesCreation />}
 
-            {/* ✅ Expenditure */}
-            {activeTab === "expenditure" && isAdmin && <Expenditure />}
+            {/* ── Expenditure (super_admin, finance_admin) ── */}
+            {activeTab === "expenditure" && canManageExpenditure && <Expenditure />}
 
-            {/* ✅ Employee Profile */}
-            {activeTab === "profile" && user?.role === "employee" && <EmployeeProfile />}
+            {/* ── Employee Profile ── */}
+            {activeTab === "profile" && role === "employee" && <EmployeeProfile />}
 
-            {/* ✅ Performance */}
-            {activeTab === "performance" && (isAdmin ? <Performance /> : user?.role === "employee" ? <EmployeePerformance /> : null)}
+            {/* ── Performance ── */}
+            {activeTab === "performance" && (
+                userIsAdmin
+                    ? <Performance />
+                    : role === "employee"
+                        ? <EmployeePerformance />
+                        : null
+            )}
 
-            {/* ✅ Settings */}
-            {activeTab === "settings" && isAdmin && <Settings />}
+            {/* ── Settings — visible to any admin role; page controls what each role sees ── */}
+            {activeTab === "settings" && userIsAdmin && <Settings />}
 
-            {/* ✅ Tracking */}
-            {activeTab === "tracking" && isAdmin && <Tracking />}
 
-            {/* ✅ Recruitment */}
-            {activeTab === "recruitment" && isAdmin && <Recruitment />}
+            {/* ── Tracking (super_admin only) ── */}
+            {activeTab === "tracking" && canManageTracking && <Tracking />}
 
-            {/* Access Denied */}
+            {/* ── Recruitment (super_admin, hr_admin) ── */}
+            {activeTab === "recruitment" && canManageRecruitment && <Recruitment />}
+
+            {/* ── Access Denied ── */}
             {!visibleNavIds.includes(activeTab) && (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 select-none">
                     <div className="text-6xl mb-4">🔒</div>
