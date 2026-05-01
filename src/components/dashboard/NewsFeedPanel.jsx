@@ -76,7 +76,7 @@ export default function NewsFeedPanel({ setActiveTab }) {
                                 {post.image && (
                                     <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm z-0 relative">
                                         <img
-                                            src={`http://localhost:8000${post.image}`}
+                                            src={`https://sportyfi.com/images${post.image}`}
                                             alt="Announcement preview"
                                             className="absolute inset-0 w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                                         />

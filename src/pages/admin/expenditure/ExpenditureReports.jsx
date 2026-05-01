@@ -46,7 +46,7 @@ function PnlSummary({ filterDate, pnlRows, netAfterSalary, onUpload, isUploading
                 </div>
                 {uploadedPnlUrl && (
                     <a
-                        href={`http://localhost:8000${uploadedPnlUrl}`}
+                        href={`https://sportyfi.com${uploadedPnlUrl}`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
