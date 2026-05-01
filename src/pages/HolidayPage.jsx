@@ -5,9 +5,9 @@ import HolidayManagement from "../components/holidays/HolidayManagement";
 import { Gift, Calendar as CalendarIcon, Settings } from "lucide-react";
 
 export default function HolidayPage() {
-    const { user } = useAuth();
+    const { user, isSuperAdmin, isHRAdmin } = useAuth();
     const [viewMode, setViewMode] = useState("calendar"); // calendar | manage
-    const isAdmin = user?.role === "admin";
+    const isAdmin = isSuperAdmin || isHRAdmin;
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">

@@ -201,15 +201,17 @@ export default function UserManagement() {
                                             <td className="px-5 py-4">
                                                 <button
                                                     onClick={() => handleToggle(u._id, u.name, u.isActive)}
-                                                    disabled={toggling === u._id}
+                                                    disabled={toggling === u._id || u.role === "super_admin"}
                                                     className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${u.isActive
                                                         ? "bg-red-50 hover:bg-red-100 text-red-600"
                                                         : "bg-emerald-50 hover:bg-emerald-100 text-emerald-600"
-                                                    } ${toggling === u._id ? "opacity-50 cursor-not-allowed" : ""}`}
+                                                    } ${(toggling === u._id || u.role === "super_admin") ? "opacity-50 cursor-not-allowed grayscale" : ""}`}
+                                                    title={u.role === "super_admin" ? "Super Admin cannot be deactivated" : ""}
                                                 >
                                                     {toggling === u._id ? "..." : u.isActive ? "Deactivate" : "Activate"}
                                                 </button>
                                             </td>
+
                                         </tr>
                                     ))}
                                 </tbody>

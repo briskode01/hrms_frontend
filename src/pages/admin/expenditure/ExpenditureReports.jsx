@@ -1,55 +1,60 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useExpenditure } from "./ExpenditureContext";
-import { FileDown } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import toast from "react-hot-toast";
+import { FileDown, CloudUpload, Loader2, ExternalLink } from "lucide-react";
+import ReportCard from "../../../components/reports/ReportCard";
+import usePnlUpload, { buildReportPdf } from "../../../hooks/usePnlUpload";
 
-function handleExport(title, rows, total, totalLabel) {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(title, 14, 20);
-    
-    const tableData = rows.map(r => [r.label, r.value]);
-    if (total !== undefined && totalLabel) {
-        tableData.push([{ content: totalLabel, styles: { fontStyle: 'bold' } }, { content: total, styles: { fontStyle: 'bold' } }]);
-    }
+// ReportCard and PDF helpers moved to components/hooks
 
-    autoTable(doc, {
-        startY: 30,
-        head: [['Description', 'Amount / Details']],
-        body: tableData,
-    });
-
-    doc.save(`${title.replace(/ /g, "_").toLowerCase()}.pdf`);
-}
-
-function ReportCard({ title, rows, total, totalLabel, color }) {
+function PnlSummary({ filterDate, pnlRows, netAfterSalary, onUpload, isUploading, onExport, uploadedPnlUrl }) {
     return (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className={`px-5 py-4 border-b border-slate-100 flex items-center justify-between`}>
-                <p className="font-extrabold text-slate-800">{title}</p>
-                <button 
-                    onClick={() => handleExport(title, rows, total, totalLabel)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
-                >
-                    <FileDown size={14} /> Export PDF
-                </button>
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+                <div>
+                    <p className="font-extrabold text-slate-800">Profit & Loss Summary</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{filterDate ? `Filtered period: ${filterDate}` : "Current month summary"}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <button
+                        onClick={onUpload}
+                        disabled={isUploading}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                        {isUploading ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
+                        {isUploading ? "Uploading..." : "Auto Upload P&L"}
+                    </button>
+                    <button
+                        onClick={onExport}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                    >
+                        <FileDown size={14} /> Export PDF
+                    </button>
+                </div>
             </div>
-            <div className="divide-y divide-slate-50 max-h-[320px] overflow-y-auto">
-                {rows.map((r, i) => (
-                    <div key={i} className="flex items-center justify-between px-5 py-3">
+            <div className="p-5 space-y-3">
+                {pnlRows.map(r => (
+                    <div key={r.label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                         <span className="text-sm text-slate-600">{r.label}</span>
-                        <span className={`text-sm font-extrabold ${color}`}>{r.value}</span>
+                        <span className={`text-sm font-extrabold ${r.color || ''}`}>{r.value}</span>
                     </div>
                 ))}
-            </div>
-            {total !== undefined && (
-                <div className={`px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between`}>
-                    <span className="text-sm font-extrabold text-slate-700">{totalLabel}</span>
-                    <span className={`text-base font-extrabold ${color}`}>{total}</span>
+                <div className={`flex items-center justify-between py-3 rounded-xl px-3 mt-2 ${netAfterSalary >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
+                    <span className="text-sm font-extrabold text-slate-700">Net Profit / Loss</span>
+                    <span className={`text-lg font-extrabold ${netAfterSalary >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{pnlRows[pnlRows.length-1]?.value}</span>
                 </div>
-            )}
+                {uploadedPnlUrl && (
+                    <a
+                        href={`http://localhost:8000${uploadedPnlUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                    >
+                        <ExternalLink size={13} /> Open uploaded copy
+                    </a>
+                )}
+            </div>
         </div>
     );
 }
@@ -57,21 +62,22 @@ function ReportCard({ title, rows, total, totalLabel, color }) {
 export default function ExpenditureReports() {
     const { expenses: allExpenses, income: allIncome, advances: allAdvances, payrolls: allPayrolls, fmtINR } = useExpenditure();
     const [filterDate, setFilterDate] = useState("");
+    const { upload: uploadFn, isUploading, uploadedUrl } = usePnlUpload();
 
     const matchDate = (d) => d && d.startsWith(filterDate);
     const expenses = filterDate ? allExpenses.filter(e => matchDate(e.date)) : allExpenses;
     const income = filterDate ? allIncome.filter(i => matchDate(i.date)) : allIncome;
     const advances = filterDate ? allAdvances.filter(a => matchDate(a.date) || matchDate(a.createdAt)) : allAdvances;
 
-    let payrolls = allPayrolls || [];
-    if (filterDate) {
+    const payrolls = useMemo(() => {
+        if (!filterDate) return allPayrolls || [];
         const [year, month] = filterDate.split('-');
-        payrolls = (allPayrolls || []).filter(p => p.year === Number(year) && p.month === Number(month));
-    }
+        return (allPayrolls || []).filter(p => p.year === Number(year) && p.month === Number(month));
+    }, [filterDate, allPayrolls]);
 
-    const totalIncome = income.reduce((sum, i) => sum + Number(i.amount), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    const totalAdvances = advances.reduce((sum, a) => sum + Number(a.amount), 0);
+    const totalIncome = useMemo(() => income.reduce((sum, i) => sum + Number(i.amount), 0), [income]);
+    const totalExpenses = useMemo(() => expenses.reduce((sum, e) => sum + Number(e.amount), 0), [expenses]);
+    const totalAdvances = useMemo(() => advances.reduce((sum, a) => sum + Number(a.amount), 0), [advances]);
 
     // Group expenses by category
     const expByCategory = {};
@@ -100,15 +106,45 @@ export default function ExpenditureReports() {
     const incDateRows = Object.entries(incByDate).sort((a, b) => new Date(b[0]) - new Date(a[0])).map(([k, v]) => ({ label: k, value: fmtINR(v) }));
 
     // Advances report
-    const advRows = advances.map(a => ({
+    const advRows = useMemo(() => advances.map(a => ({
         label: `${a.employee} (${a.employeeId})`,
         value: `${fmtINR(a.amount)} — ${a.status}`,
-    }));
+    })), [advances, fmtINR]);
 
     // Profit/loss
-    const profit = totalIncome - totalExpenses;
-    const salaryCost = payrolls.reduce((sum, p) => sum + (Number(p.earnings?.basic) || 0) + (Number(p.earnings?.hra) || 0) + (Number(p.earnings?.bonus) || 0), 0);
-    const netAfterSalary = profit - salaryCost;
+    const profit = useMemo(() => totalIncome - totalExpenses, [totalIncome, totalExpenses]);
+    const salaryCost = useMemo(() => payrolls.reduce((sum, p) => sum + (Number(p.earnings?.basic) || 0) + (Number(p.earnings?.hra) || 0) + (Number(p.earnings?.bonus) || 0), 0), [payrolls]);
+    const netAfterSalary = useMemo(() => profit - salaryCost, [profit, salaryCost]);
+
+    const reportMonth = useMemo(() => filterDate ? Number(filterDate.split("-")[1]) : new Date().getMonth() + 1, [filterDate]);
+    const reportYear = useMemo(() => filterDate ? Number(filterDate.split("-")[0]) : new Date().getFullYear(), [filterDate]);
+    const reportLabel = useMemo(() => filterDate ? `P&L ${filterDate}` : `P&L ${new Date().toISOString().slice(0, 7)}`, [filterDate]);
+
+    const outstandingAdvances = useMemo(() => advances.filter(a => a.status === "Active").reduce((s, a) => s + (a.amount - (a.paid || 0)), 0), [advances]);
+
+    const pnlRows = useMemo(() => [
+        { label: "Total Revenue", value: fmtINR(totalIncome), color: "text-emerald-600" },
+        { label: "Total Expenses", value: fmtINR(totalExpenses), color: "text-rose-600" },
+        { label: "Salary Costs", value: fmtINR(salaryCost), color: "text-rose-600" },
+        { label: "Advances Outstanding", value: fmtINR(outstandingAdvances), color: "text-amber-600" },
+        { label: "Net Profit / Loss", value: fmtINR(netAfterSalary) },
+    ], [totalIncome, totalExpenses, salaryCost, netAfterSalary, outstandingAdvances, fmtINR]);
+
+    const exportReport = useCallback((title, rows, total, totalLabel) => {
+        const doc = buildReportPdf(title, rows, total, totalLabel);
+        doc.save(`${title.replace(/ /g, "_").toLowerCase()}.pdf`);
+    }, []);
+
+    const uploadPnlReport = useCallback(async () => {
+        try {
+            const doc = buildReportPdf("Profit & Loss Summary", pnlRows, fmtINR(netAfterSalary), "Net Profit / Loss");
+            const fileName = `${reportLabel.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase()}.pdf`;
+            await uploadFn({ doc, fileName, month: reportMonth, year: reportYear });
+            toast.success("P&L report uploaded");
+        } catch (e) {
+            toast.error(e?.message || "Failed to upload P&L report");
+        }
+    }, [pnlRows, netAfterSalary, reportLabel, reportMonth, reportYear, uploadFn]);
 
     return (
         <div className="space-y-6">
@@ -154,6 +190,7 @@ export default function ExpenditureReports() {
                     total={fmtINR(totalExpenses)}
                     totalLabel="Total Expenses"
                     color="text-rose-600"
+                    onExport={() => exportReport("Daily Expense Report", expDateRows, fmtINR(totalExpenses), "Total Expenses")}
                 />
 
                 {/* Daily Income */}
@@ -163,6 +200,7 @@ export default function ExpenditureReports() {
                     total={fmtINR(totalIncome)}
                     totalLabel="Total Income"
                     color="text-emerald-600"
+                    onExport={() => exportReport("Daily Income Report", incDateRows, fmtINR(totalIncome), "Total Income")}
                 />
 
                 {/* Expense by category */}
@@ -172,6 +210,7 @@ export default function ExpenditureReports() {
                     total={fmtINR(totalExpenses)}
                     totalLabel="Total Expenses"
                     color="text-rose-600"
+                    onExport={() => exportReport(filterDate ? `Expense Report (${filterDate})` : "Monthly Expense Report", expCatRows, fmtINR(totalExpenses), "Total Expenses")}
                 />
 
                 {/* Income by source */}
@@ -181,6 +220,7 @@ export default function ExpenditureReports() {
                     total={fmtINR(totalIncome)}
                     totalLabel="Total Income"
                     color="text-emerald-600"
+                    onExport={() => exportReport(filterDate ? `Income Report (${filterDate})` : "Monthly Income Report", incSrcRows, fmtINR(totalIncome), "Total Income")}
                 />
 
                 {/* Advances */}
@@ -190,31 +230,17 @@ export default function ExpenditureReports() {
                     total={fmtINR(totalAdvances)}
                     totalLabel="Total Advances"
                     color="text-amber-600"
+                    onExport={() => exportReport("Employee Advance Report", advRows, fmtINR(totalAdvances), "Total Advances")}
                 />
-
-                {/* P&L Summary */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100">
-                        <p className="font-extrabold text-slate-800">Profit & Loss Summary</p>
-                    </div>
-                    <div className="p-5 space-y-3">
-                        {[
-                            { label: "Total Revenue",          val: fmtINR(totalIncome),     color: "text-emerald-600" },
-                            { label: "Total Expenses",         val: `− ${fmtINR(totalExpenses)}`, color: "text-rose-600" },
-                            { label: "Salary Costs",           val: `− ${fmtINR(salaryCost)}`,  color: "text-rose-600" },
-                            { label: "Advances Outstanding",   val: `− ${fmtINR(advances.filter(a=>a.status==='Active').reduce((s,a)=>s+(a.amount-a.paid),0))}`, color: "text-amber-600" },
-                        ].map(r => (
-                            <div key={r.label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                                <span className="text-sm text-slate-600">{r.label}</span>
-                                <span className={`text-sm font-extrabold ${r.color}`}>{r.val}</span>
-                            </div>
-                        ))}
-                        <div className={`flex items-center justify-between py-3 rounded-xl px-3 mt-2 ${netAfterSalary >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
-                            <span className="text-sm font-extrabold text-slate-700">Net Profit / Loss</span>
-                            <span className={`text-lg font-extrabold ${netAfterSalary >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{fmtINR(netAfterSalary)}</span>
-                        </div>
-                    </div>
-                </div>
+                <PnlSummary
+                    filterDate={filterDate}
+                    pnlRows={pnlRows}
+                    netAfterSalary={netAfterSalary}
+                    onUpload={uploadPnlReport}
+                    isUploading={isUploading}
+                    onExport={() => exportReport("Profit & Loss Summary", pnlRows, fmtINR(netAfterSalary), "Net Profit / Loss")}
+                    uploadedPnlUrl={uploadedUrl}
+                />
             </div>
         </div>
     );
