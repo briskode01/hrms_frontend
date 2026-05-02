@@ -124,7 +124,9 @@ export default function EmployeeTasks() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Daily Tasks</h2>
-          <p className="text-sm text-slate-400 mt-1">Assign tasks to colleagues and track updates.</p>
+          <p className="text-sm text-slate-400 mt-1">
+            {user?.role !== "employee" ? "Assign tasks to colleagues and track updates." : "View your tasks and track progress."}
+          </p>
         </div>
         <input
           type="date"
@@ -134,15 +136,17 @@ export default function EmployeeTasks() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left Col: Assignment Form */}
-        <TaskAssignmentForm
-          employees={employees}
-          form={assignForm}
-          setForm={setAssignForm}
-          onSubmit={handleAssignTask}
-          submitting={submitting}
-        />
+      <div className={`grid gap-6 items-start ${user?.role !== "employee" ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1"}`}>
+        {/* Left Col: Assignment Form — only for admins/managers */}
+        {user?.role !== "employee" && (
+          <TaskAssignmentForm
+            employees={employees}
+            form={assignForm}
+            setForm={setAssignForm}
+            onSubmit={handleAssignTask}
+            submitting={submitting}
+          />
+        )}
 
         {/* Right Col: Task Lists */}
         <div className="lg:col-span-2 space-y-8">

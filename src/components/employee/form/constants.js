@@ -1,4 +1,4 @@
-export const DEPARTMENTS = ["Engineering", "Marketing", "HR", "Finance", "Sales", "Operations", "Design", "Freelancing"];
+export const DEPARTMENTS = ["Engineering", "Marketing", "HR", "Finance", "Sales", "Operations", "Design", "Freelancing", "Others"];
 export const EMP_TYPES = ["Full-Time", "Part-Time", "Contract", "Intern"];
 export const STATUSES = ["Active", "Inactive"];
 export const GENDERS = ["Male", "Female", "Other"];
