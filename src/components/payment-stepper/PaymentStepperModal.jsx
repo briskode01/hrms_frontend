@@ -218,7 +218,7 @@ export default function PaymentStepperModal({ payroll, onClose, onSuccess, apiPa
                 <div className="h-full bg-blue-600 rounded-full animate-[progress_4s_ease-in-out_forwards]"></div>
             </div>
             
-            <style jsx>{`
+            <style>{`
                 @keyframes progress {
                     0% { width: 0%; }
                     20% { width: 30%; }

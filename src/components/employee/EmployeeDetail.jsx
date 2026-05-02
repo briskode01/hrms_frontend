@@ -111,7 +111,7 @@ export default function EmployeeDetail({ employee, onClose, onEdit }) {
                                 { key: "offerLetter", label: "Offer Letter", icon: "📨" },
                             ].map(({ key, label, icon }) => {
                                 const filePath = employee.documents?.[key];
-                                const fileUrl = filePath ? `http://localhost:8000/${filePath}` : null;
+                                const fileUrl = filePath ? `http://localhost:8000${filePath}` : null;
                                 return (
                                     <div key={key} className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
                                         <div className="flex items-center gap-2.5">

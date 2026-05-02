@@ -41,6 +41,15 @@ export function ExpenditureProvider({ children }) {
         }
     };
 
+    useEffect(() => {
+        const handleRefresh = () => {
+            fetchAll();
+        };
+
+        window.addEventListener("expenditure:refresh", handleRefresh);
+        return () => window.removeEventListener("expenditure:refresh", handleRefresh);
+    }, []);
+
     useEffect(() => { fetchAll(); }, []);
 
     // ─── Expenses CRUD ────────────────────────────────────────
